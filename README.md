@@ -2,11 +2,23 @@
 
 An original interactive Three.js isometric 3D pixel-mosaic market visualization with a deterministic 1080p60 video capture pipeline.
 
+[![TAREN — Market Wave (15s 1080p60 preview — click for full MP4)](./preview.gif)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4)
+
+> **Full 1080p60 Video (with synthesized stereo audio):** [Download / Watch `pixel-mosaic-market-wave-1080p60.mp4` (1920×1080, 60 fps, 15.0s, 30.5 MB)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4) · [View file in repo](./pixel-mosaic-market-wave-1080p60.mp4)
+
 ## Concept
 
 A continuous synthetic market field—rolling price waves, stylized OHLC candlesticks, and foreground volume bars—is quantized into an isometric 3D grid of 2,432 instanced flat square tiles (`64 × 38`), each displaying a crisp flickering two-digit synthetic quote (`00`–`99`). Whole horizontal rows displace in response to moving wave crests and pointer disturbance; tiles extrude upward on lifts and sink into recessed trenches on drawdowns; trailing edges disperse into drifting data fragments; and volatility spikes or click-shocks detonate tile clusters into tumbling quantized particles before the grid heals.
 
 All market series (`VXM`, `KLR`, `QDT`), branding (`TAREN`), palettes, and synthesized audio are 100% original and synthetic.
+
+## Presets & Stills
+
+| 01 Open Lift | 02 Bid Storm (Click-Shock) |
+| :---: | :---: |
+| ![Open Lift](./stills/still_01_open_lift_1.5s.png) | ![Bid Storm Click-Shock](./stills/still_03_click_shock_5.25s.png) |
+| **03 Drawdown** | **04 Flash After-Hours (Spike Dissolve)** |
+| ![Drawdown](./stills/still_04_drawdown_9.08s.png) | ![Flash After-Hours Dissolve](./stills/still_05_flash_dissolve_12.25s.png) |
 
 ## Running Live
 
