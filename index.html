@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TAREN — Market Wave</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #040609;
+      color: #eef3f7;
+      font-family: 'Plus Jakarta Sans', 'Liberation Sans', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      touch-action: none;
+    }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #040609;
+    }
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #hud-canvas {
+      pointer-events: none;
+    }
+    #preset-hits {
+      position: absolute;
+      left: 52px;
+      bottom: 42px;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    .preset-btn {
+      width: 148px;
+      height: 36px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      outline: none;
+    }
+    body.capture-mode #preset-hits {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="gl-canvas"></canvas>
+    <canvas id="hud-canvas"></canvas>
+    <div id="preset-hits" aria-label="Market presets">
+      <button class="preset-btn" data-preset="0" title="1: Open Lift"></button>
+      <button class="preset-btn" data-preset="1" title="2: Bid Storm"></button>
+      <button class="preset-btn" data-preset="2" title="3: Drawdown"></button>
+      <button class="preset-btn" data-preset="3" title="4: Flash After-Hours"></button>
+    </div>
+  </div>
+  <script type="module" src="./market-wave.js"></script>
+</body>
+</html>
