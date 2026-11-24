@@ -2,6 +2,8 @@
 
 An original interactive Three.js isometric 3D pixel-mosaic market visualization with a deterministic 1080p60 video capture pipeline.
 
+**Live demo:** https://artem-kaseka.github.io/pixel-mosaic-market-wave/
+
 [![TAREN — Market Wave (15s 1080p60 preview — click for full MP4)](./preview.gif)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4)
 
 > **Full 1080p60 Video (with synthesized stereo audio):** [Download / Watch `pixel-mosaic-market-wave-1080p60.mp4` (1920×1080, 60 fps, 15.0s, 30.5 MB)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4) · [View file in repo](./pixel-mosaic-market-wave-1080p60.mp4)
