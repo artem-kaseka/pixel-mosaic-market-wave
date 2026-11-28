@@ -15,6 +15,10 @@ const MAX_PARTICLES = 900;
 
 const PARAMS = new URLSearchParams(window.location.search);
 const CAPTURE_MODE = PARAMS.get('capture') === '1';
+const VERTICAL_CAPTURE = PARAMS.get('vertical') === '1';
+const CAPTURE_W = VERTICAL_CAPTURE ? 1080 : 1920;
+const CAPTURE_H = VERTICAL_CAPTURE ? 1920 : 1080;
+let isPortrait = CAPTURE_MODE ? VERTICAL_CAPTURE : window.innerHeight > window.innerWidth;
 if (CAPTURE_MODE) document.body.classList.add('capture-mode');
 
 // Deterministic hash helpers (pure functions, zero mutable global RNG state)
@@ -279,7 +283,7 @@ function sampleCandle(candleIdx, t, preset) {
 //   3.50 - 7.00s : Preset 1 (BID STORM)      + pointer cross & click-shock at 4.95s + breakout 6.15s
 //   7.00 - 11.00s: Preset 2 (DRAWDOWN)       + pointer drag wake 7.8s..10.5s + shock at 8.95s
 //  11.00 - 15.00s: Preset 3 (FLASH AFTER-HRS)+ violent flash spike detonation at 11.85s + 12.15s + quiet heal
-const CAPTURE_SHOCKS = [
+const CAPTURE_SHOCKS_LANDSCAPE = [
   // Bid Storm click-shock (column & crest eruption)
   { id: 1, t0: 4.95, gx: 34.0, gz: 17.5, strength: 1.25, radius: 6.8, seed: 411, style: 'click' },
   // Bid Storm secondary breakout burst
@@ -291,6 +295,18 @@ const CAPTURE_SHOCKS = [
   // Flash After-Hours sympathetic secondary crack
   { id: 5, t0: 12.18, gx: 42.5, gz: 14.5, strength: 1.25, radius: 7.4, seed: 977, style: 'flash' },
 ];
+
+const CAPTURE_SHOCKS_PORTRAIT = [
+  { id: 1, t0: 4.95, gx: 33.0, gz: 18.0, strength: 1.3, radius: 6.6, seed: 411, style: 'click' },
+  { id: 2, t0: 6.15, gx: 39.5, gz: 14.0, strength: 1.0, radius: 5.4, seed: 523, style: 'breakout' },
+  { id: 3, t0: 8.95, gx: 29.5, gz: 21.0, strength: 1.22, radius: 6.4, seed: 719, style: 'drawdown' },
+  { id: 4, t0: 11.85, gx: 32.5, gz: 18.0, strength: 1.85, radius: 9.6, seed: 911, style: 'flash' },
+  { id: 5, t0: 12.18, gx: 38.0, gz: 14.5, strength: 1.28, radius: 7.0, seed: 977, style: 'flash' },
+];
+
+function getCaptureShocks() {
+  return isPortrait ? CAPTURE_SHOCKS_PORTRAIT : CAPTURE_SHOCKS_LANDSCAPE;
+}
 
 function getScriptedPresetState(t) {
   const xfade = 0.34;
@@ -305,38 +321,40 @@ function getScriptedPresetState(t) {
 
 // Analytical scripted pointer in grid coordinates (gx in 0..COLS, gz in 0..ROWS) + active intensity
 function getScriptedPointer(t) {
+  const xSpan = isPortrait ? 0.60 : 1.0;
+  const mapX = (gx) => 32.0 + (gx - 32.0) * xSpan;
   // Segment 1: Open Lift glide (0.85s - 3.25s)
   if (t >= 0.75 && t <= 3.35) {
     const u = smoothstep(0.85, 3.25, t);
     const fade = smoothstep(0.75, 1.05, t) * (1 - smoothstep(3.05, 3.35, t));
-    const gx = lerp(16, 48, u);
+    const gx = mapX(lerp(16, 48, u));
     const gz = 22.5 - Math.sin(u * Math.PI * 1.4) * 7.0 - u * 3.0;
-    return { active: fade, gx, gz, vx: 13.0, vz: -3.0 };
+    return { active: fade, gx, gz, vx: 13.0 * xSpan, vz: -3.0 };
   }
   // Segment 2: Bid Storm sweep across crest into click-shock at 4.95s (3.95s - 6.3s)
   if (t >= 3.85 && t <= 6.4) {
     const u = smoothstep(3.95, 6.25, t);
     const fade = smoothstep(3.85, 4.15, t) * (1 - smoothstep(6.05, 6.4, t));
     // Pause briefly near (34, 17.5) right at t=4.95s for click-shock
-    const gx = lerp(18, 50, u) + Math.sin(u * Math.PI * 2) * 1.8;
+    const gx = mapX(lerp(18, 50, u) + Math.sin(u * Math.PI * 2) * 1.8);
     const gz = lerp(24.0, 12.5, u) + Math.cos(u * Math.PI * 2.2) * 2.5;
-    return { active: fade, gx, gz, vx: 14.5, vz: -5.2 };
+    return { active: fade, gx, gz, vx: 14.5 * xSpan, vz: -5.2 };
   }
   // Segment 3: Drawdown heavy diagonal drag wake (7.65s - 10.65s)
   if (t >= 7.55 && t <= 10.75) {
     const u = smoothstep(7.65, 10.6, t);
     const fade = smoothstep(7.55, 7.9, t) * (1 - smoothstep(10.35, 10.75, t));
-    const gx = lerp(49, 15, u);
+    const gx = mapX(lerp(49, 15, u));
     const gz = lerp(12.5, 27.5, u) + Math.sin(u * Math.PI * 2.5) * 2.8;
-    return { active: fade, gx, gz, vx: -12.0, vz: 5.5 };
+    return { active: fade, gx, gz, vx: -12.0 * xSpan, vz: 5.5 };
   }
   // Segment 4: Flash After-Hours quiet probe before spike (11.15s - 12.45s)
   if (t >= 11.1 && t <= 12.6) {
     const u = smoothstep(11.15, 12.3, t);
     const fade = smoothstep(11.1, 11.35, t) * (1 - smoothstep(12.1, 12.6, t));
-    const gx = lerp(26, 36, u);
+    const gx = mapX(lerp(26, 36, u));
     const gz = lerp(22, 17.2, u);
-    return { active: fade, gx, gz, vx: 8.5, vz: -4.0 };
+    return { active: fade, gx, gz, vx: 8.5 * xSpan, vz: -4.0 };
   }
   return { active: 0, gx: -100, gz: -100, vx: 0, vz: 0 };
 }
@@ -392,19 +410,21 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: false,
   powerPreference: 'high-performance',
-  preserveDrawingBuffer: true,
+  preserveDrawingBuffer: CAPTURE_MODE,
 });
 renderer.setClearColor(0x040609, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 
-// Telephoto 3/4 isometric camera (25° FOV = crisp architectural isometric lines + luxury depth)
-const camera = new THREE.PerspectiveCamera(25, 16 / 9, 5, 220);
-const BASE_CAM_POS = new THREE.Vector3(-18.5, 31.5, 42.0);
-const BASE_CAM_TARGET = new THREE.Vector3(0.5, 0.2, 0.5);
-camera.position.copy(BASE_CAM_POS);
-camera.lookAt(BASE_CAM_TARGET);
+// Telephoto 3/4 isometric camera (adapts cleanly between landscape 16:9 and vertical 9:16)
+const camera = new THREE.PerspectiveCamera(25, 16 / 9, 5, 260);
+const BASE_CAM_POS_LANDSCAPE = new THREE.Vector3(-18.5, 31.5, 42.0);
+const BASE_CAM_TARGET_LANDSCAPE = new THREE.Vector3(0.5, 0.2, 0.5);
+const BASE_CAM_POS_PORTRAIT = new THREE.Vector3(-21.0, 44.5, 51.0);
+const BASE_CAM_TARGET_PORTRAIT = new THREE.Vector3(0.5, -0.3, 0.8);
+camera.position.copy(BASE_CAM_POS_LANDSCAPE);
+camera.lookAt(BASE_CAM_TARGET_LANDSCAPE);
 
 // ============================================================================
 // SUBSTRATE BASE PLANE (subtle illuminated grid + unquantized price contour)
@@ -467,10 +487,10 @@ const substrateMat = new THREE.ShaderMaterial({
       float trace = exp(-distWave * 28.0) * 0.26;
       float trace2 = exp(-abs(normZ - (waveZ + 0.12)) * 42.0) * 0.10;
 
-      // Edge vignette fade into deep obsidian void (guarantees zero visible plane seam)
-      float edgeMask = smoothstep(0.0, 0.24, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
+      // Edge vignette fade into deep obsidian void (guarantees zero visible plane seam in both 16:9 and 9:16)
+      float edgeMask = smoothstep(0.0, 0.28, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
       float distCenter = length(vWorldPos.xz / vec2(uGridSize.x * 0.56, uGridSize.y * 0.58));
-      float fade = (1.0 - smoothstep(0.58, 1.12, distCenter)) * edgeMask;
+      float fade = (1.0 - smoothstep(0.54, 1.04, distCenter)) * edgeMask;
 
       vec3 col = uBgColor + uAccent * (minorGrid * 0.35 + majorLine * 0.55 + trace + trace2) * fade;
       gl_FragColor = vec4(col, 1.0);
@@ -478,7 +498,7 @@ const substrateMat = new THREE.ShaderMaterial({
   `,
 });
 
-const substrateGeo = new THREE.PlaneGeometry(COLS * 2.1, ROWS * 2.3);
+const substrateGeo = new THREE.PlaneGeometry(COLS * 3.4, ROWS * 4.4);
 substrateGeo.rotateX(-Math.PI / 2);
 const substrateMesh = new THREE.Mesh(substrateGeo, substrateMat);
 substrateMesh.position.set(0, -0.06, 0);
@@ -802,14 +822,16 @@ function evaluateFrame(t, modeCapture) {
   }
 
   // 2. Subtle breathing isometric camera dolly (stable, refined, architectural)
-  const breath = Math.sin(t * 0.42) * 0.75;
-  const driftX = Math.sin(t * 0.27) * 1.1;
+  const basePos = isPortrait ? BASE_CAM_POS_PORTRAIT : BASE_CAM_POS_LANDSCAPE;
+  const baseTarget = isPortrait ? BASE_CAM_TARGET_PORTRAIT : BASE_CAM_TARGET_LANDSCAPE;
+  const breath = Math.sin(t * 0.42) * (isPortrait ? 0.95 : 0.75);
+  const driftX = Math.sin(t * 0.27) * (isPortrait ? 0.85 : 1.1);
   camera.position.set(
-    BASE_CAM_POS.x + driftX,
-    BASE_CAM_POS.y + breath * 0.55,
-    BASE_CAM_POS.z + breath * 0.95
+    basePos.x + driftX,
+    basePos.y + breath * 0.55,
+    basePos.z + breath * 0.95
   );
-  camera.lookAt(BASE_CAM_TARGET.x + driftX * 0.25, BASE_CAM_TARGET.y, BASE_CAM_TARGET.z);
+  camera.lookAt(baseTarget.x + driftX * 0.25, baseTarget.y, baseTarget.z);
   camera.updateMatrixWorld();
 
   // 3. Background & shader uniforms
@@ -868,10 +890,10 @@ function evaluateFrame(t, modeCapture) {
     }
   }
 
-  // Active shock events (capture uses fixed timeline; live uses interactive + occasional ambient flash spikes in preset 3)
+  // Active shock events (capture uses fixed timeline; live uses interactive)
   let shocks;
   if (modeCapture) {
-    shocks = CAPTURE_SHOCKS;
+    shocks = getCaptureShocks();
   } else {
     shocks = liveState.shocks;
   }
@@ -1367,6 +1389,10 @@ function evaluateFrame(t, modeCapture) {
 function renderHud() {
   const W = hudCanvas.width;
   const H = hudCanvas.height;
+  if (H > W) {
+    renderPortraitHud(W, H);
+    return;
+  }
   const scale = W / 1920;
   const ctx = hudCtx;
   ctx.clearRect(0, 0, W, H);
@@ -1564,6 +1590,210 @@ function renderHud() {
   ctx.restore();
 }
 
+function renderPortraitHud(W, H) {
+  const scale = W / 1080;
+  const ctx = hudCtx;
+  ctx.clearRect(0, 0, W, H);
+
+  const mX = Math.round(52 * scale);
+  const topY = Math.round(78 * scale);
+  const botM = Math.round(72 * scale);
+  const acc = frameTelemetry.accentRgb;
+  const accCss = rgb01ToCss(acc, 1.0);
+  const accSoft = rgb01ToCss(acc, 0.36);
+
+  // Subtle vertical framing vignette + top/bottom editorial scrims
+  const vig = ctx.createRadialGradient(W * 0.5, H * 0.5, W * 0.32, W * 0.5, H * 0.5, H * 0.62);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(3,5,8,0.46)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  const topScrimH = Math.round(290 * scale);
+  const topScrim = ctx.createLinearGradient(0, 0, 0, topScrimH);
+  topScrim.addColorStop(0, 'rgba(4, 6, 10, 0.92)');
+  topScrim.addColorStop(0.58, 'rgba(4, 6, 10, 0.56)');
+  topScrim.addColorStop(1, 'rgba(4, 6, 10, 0.0)');
+  ctx.fillStyle = topScrim;
+  ctx.fillRect(0, 0, W, topScrimH);
+
+  const botScrimH = Math.round(310 * scale);
+  const botScrim = ctx.createLinearGradient(0, H - botScrimH, 0, H);
+  botScrim.addColorStop(0, 'rgba(4, 6, 10, 0.0)');
+  botScrim.addColorStop(0.4, 'rgba(4, 6, 10, 0.58)');
+  botScrim.addColorStop(1, 'rgba(4, 6, 10, 0.95)');
+  ctx.fillStyle = botScrim;
+  ctx.fillRect(0, H - botScrimH, W, botScrimH);
+
+  // Pointer wake reticle
+  if (frameTelemetry.pointerScreen && frameTelemetry.pointerStrength > 0.04) {
+    const p = frameTelemetry.pointerScreen;
+    const a = frameTelemetry.pointerStrength * 0.78;
+    const r = 24 * scale;
+    ctx.save();
+    ctx.strokeStyle = rgb01ToCss(acc, a);
+    ctx.lineWidth = Math.max(1.2, 1.8 * scale);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const tick = 8 * scale;
+    ctx.beginPath();
+    ctx.moveTo(p.x - r - tick, p.y);
+    ctx.lineTo(p.x - r + 3 * scale, p.y);
+    ctx.moveTo(p.x + r - 3 * scale, p.y);
+    ctx.lineTo(p.x + r + tick, p.y);
+    ctx.moveTo(p.x, p.y - r - tick);
+    ctx.lineTo(p.x, p.y - r + 3 * scale);
+    ctx.moveTo(p.x, p.y + r - 3 * scale);
+    ctx.lineTo(p.x, p.y + r + tick);
+    ctx.stroke();
+
+    ctx.fillStyle = rgb01ToCss(acc, a);
+    ctx.fillRect(p.x - 2 * scale, p.y - 2 * scale, 4 * scale, 4 * scale);
+    ctx.restore();
+  }
+
+  // Expanding isometric square pulse on shocks
+  for (const sr of frameTelemetry.activeShockRings) {
+    const u = sr.age / 1.35;
+    const a = (1.0 - u) * (1.0 - u) * 0.6;
+    const sz = (24 + u * 165 * sr.strength) * scale;
+    ctx.save();
+    ctx.translate(sr.pt.x, sr.pt.y);
+    ctx.scale(1.0, 0.58);
+    ctx.rotate(Math.PI * 0.25);
+    ctx.strokeStyle = rgb01ToCss(acc, a);
+    ctx.lineWidth = Math.max(1.2, 2.0 * scale);
+    ctx.strokeRect(-sz * 0.5, -sz * 0.5, sz, sz);
+    ctx.restore();
+  }
+
+  // --------------------------------------------------------------------------
+  // TOP HEADER (Mobile-first Swiss Editorial Lockup)
+  // --------------------------------------------------------------------------
+  ctx.save();
+  const sq = Math.round(9.5 * scale);
+  const gap = Math.round(3.5 * scale);
+  const ex = mX;
+  const ey = topY + Math.round(3 * scale);
+  ctx.fillStyle = 'rgba(240, 246, 250, 0.95)';
+  ctx.fillRect(ex, ey, sq, sq);
+  ctx.fillRect(ex + sq + gap, ey + sq + gap, sq, sq);
+  ctx.fillStyle = accCss;
+  ctx.fillRect(ex + sq + gap, ey, sq, sq);
+  ctx.strokeStyle = 'rgba(240, 246, 250, 0.42)';
+  ctx.lineWidth = Math.max(1, 1.3 * scale);
+  ctx.strokeRect(ex + 0.5, ey + sq + gap + 0.5, sq - 1, sq - 1);
+
+  const wmX = ex + (sq * 2 + gap) + Math.round(18 * scale);
+  ctx.font = `600 ${Math.round(27 * scale)}px "Plus Jakarta Sans", "Liberation Sans", sans-serif`;
+  ctx.fillStyle = 'rgba(244, 248, 252, 0.96)';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  drawTrackedText(ctx, 'TAREN', wmX, topY, 4.8 * scale);
+
+  const divX = wmX + Math.round(138 * scale);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
+  ctx.fillRect(divX, topY + Math.round(3 * scale), Math.max(1, 1.5 * scale), Math.round(24 * scale));
+
+  ctx.font = `500 ${Math.round(22 * scale)}px "Plus Jakarta Sans", "Liberation Sans", sans-serif`;
+  ctx.fillStyle = 'rgba(226, 236, 244, 0.88)';
+  drawTrackedText(ctx, 'MARKET WAVE', divX + Math.round(22 * scale), topY + Math.round(2.5 * scale), 3.0 * scale);
+
+  // Top-right synthetic clock + live accent pip
+  const baseSec = 9 * 3600 + 42 * 60 + 14 + frameTelemetry.t;
+  const hh = String(Math.floor(baseSec / 3600) % 24).padStart(2, '0');
+  const mm = String(Math.floor((baseSec % 3600) / 60)).padStart(2, '0');
+  const ss = String(Math.floor(baseSec % 60)).padStart(2, '0');
+  const cs = String(Math.floor((baseSec - Math.floor(baseSec)) * 100)).padStart(2, '0');
+  const ts = `${hh}:${mm}:${ss}.${cs} UTC`;
+
+  const rx = W - mX;
+  ctx.textAlign = 'right';
+  ctx.font = `500 ${Math.round(16 * scale)}px "IBM Plex Mono", "Liberation Mono", monospace`;
+  ctx.fillStyle = 'rgba(232, 240, 246, 0.86)';
+  ctx.fillText(ts, rx, topY + Math.round(6 * scale));
+  const tsW = ctx.measureText(ts).width;
+  ctx.fillStyle = accCss;
+  ctx.fillRect(rx - tsW - Math.round(16 * scale), topY + Math.round(11 * scale), Math.round(7 * scale), Math.round(7 * scale));
+
+  // Subtitle row
+  const row2Y = topY + Math.round(44 * scale);
+  ctx.textAlign = 'left';
+  ctx.font = `400 ${Math.round(14.5 * scale)}px "IBM Plex Mono", "Liberation Mono", monospace`;
+  ctx.fillStyle = 'rgba(186, 204, 218, 0.52)';
+  ctx.fillText('QUANTIZED ORDER-FLOW MOSAIC · 04', mX, row2Y);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(206, 222, 232, 0.68)';
+  ctx.fillText(frameTelemetry.sessionLabel, rx, row2Y);
+
+  // Precision hairline rule
+  const ruleY = topY + Math.round(76 * scale);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.fillRect(mX, ruleY, W - mX * 2, Math.max(1, scale));
+  ctx.fillStyle = accSoft;
+  ctx.fillRect(mX, ruleY, Math.round(76 * scale), Math.max(1.5, 1.8 * scale));
+
+  // Synthetic series telemetry strip
+  const row3Y = ruleY + Math.round(14 * scale);
+  ctx.textAlign = 'left';
+  ctx.font = `400 ${Math.round(15.5 * scale)}px "IBM Plex Mono", "Liberation Mono", monospace`;
+  ctx.fillStyle = 'rgba(204, 220, 230, 0.66)';
+  ctx.fillText(
+    `VXM ${frameTelemetry.vxmDelta}   ·   KLR ${frameTelemetry.klrVal}   ·   QDT ${frameTelemetry.qdtVal}`,
+    mX,
+    row3Y
+  );
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(186, 204, 218, 0.54)';
+  const shiftStr = `+${frameTelemetry.maxRowShift.toFixed(1)}`;
+  const dispStr = `${String(frameTelemetry.dispersionPct).padStart(2, '0')}%`;
+  ctx.fillText(`SHIFT ${shiftStr}  ·  DISP ${dispStr}`, rx, row3Y);
+  ctx.restore();
+
+  // --------------------------------------------------------------------------
+  // BOTTOM 2x2 PRESET STRIP + QUIET FOOTER
+  // --------------------------------------------------------------------------
+  ctx.save();
+  const colGap = Math.round(28 * scale);
+  const colW = Math.floor((W - mX * 2 - colGap) / 2);
+  const rowGap = Math.round(56 * scale);
+  const gridTopY = H - botM - Math.round(138 * scale);
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i < PRESETS.length; i++) {
+    const p = PRESETS[i];
+    const active = i === frameTelemetry.presetIdx;
+    const gx = mX + (i % 2) * (colW + colGap);
+    const gy = gridTopY + Math.floor(i / 2) * rowGap;
+
+    ctx.fillStyle = active ? accCss : 'rgba(255, 255, 255, 0.16)';
+    ctx.fillRect(gx, gy, colW, active ? Math.max(2, 3 * scale) : Math.max(1, 1.2 * scale));
+
+    ctx.font = `${active ? 600 : 400} ${Math.round(18 * scale)}px "IBM Plex Mono", "Liberation Mono", monospace`;
+    ctx.fillStyle = active ? 'rgba(246, 250, 252, 0.96)' : 'rgba(182, 198, 210, 0.44)';
+    ctx.fillText(`${p.code}  ${p.name}`, gx, gy + Math.round(12 * scale));
+  }
+
+  // Quiet bottom footer line
+  const footY = H - botM - Math.round(14 * scale);
+  ctx.font = `400 ${Math.round(13.5 * scale)}px "IBM Plex Mono", "Liberation Mono", monospace`;
+  ctx.fillStyle = 'rgba(186, 204, 218, 0.44)';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    CAPTURE_MODE ? 'SYNTHETIC TAPE  ·  9:16 VERTICAL' : 'DRAG WAKE  ·  TAP SHOCK  ·  TAP PRESET',
+    mX,
+    footY
+  );
+  ctx.textAlign = 'right';
+  ctx.fillText('60.0 HZ', rx, footY);
+  ctx.restore();
+}
+
 function drawTrackedText(ctx, text, x, y, tracking) {
   let cx = x;
   for (let i = 0; i < text.length; i++) {
@@ -1577,9 +1807,25 @@ function drawTrackedText(ctx, text, x, y, tracking) {
 // RESIZE HANDLING
 // ============================================================================
 function resize(width, height, dpr = 1) {
+  isPortrait = height > width;
+  const aspect = width / Math.max(1, height);
   renderer.setPixelRatio(dpr);
   renderer.setSize(width, height, false);
-  camera.aspect = width / height;
+  camera.aspect = aspect;
+  if (isPortrait) {
+    // Keep horizontal tile legibility & rich diagonal depth across any phone aspect ratio
+    camera.fov = clamp(37.5 * (0.5625 / Math.max(0.44, aspect)), 34, 44);
+    tileUniforms.uFogStart.value = 58.0;
+    tileUniforms.uFogEnd.value = 122.0;
+    particleUniforms.uFogStart.value = 58.0;
+    particleUniforms.uFogEnd.value = 122.0;
+  } else {
+    camera.fov = 25;
+    tileUniforms.uFogStart.value = 42.0;
+    tileUniforms.uFogEnd.value = 94.0;
+    particleUniforms.uFogStart.value = 42.0;
+    particleUniforms.uFogEnd.value = 94.0;
+  }
   camera.updateProjectionMatrix();
 
   hudCanvas.width = Math.round(width * dpr);
@@ -1588,7 +1834,7 @@ function resize(width, height, dpr = 1) {
 
 function resizeToWindow() {
   if (CAPTURE_MODE) {
-    resize(1920, 1080, 1);
+    resize(CAPTURE_W, CAPTURE_H, 1);
   } else {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     resize(window.innerWidth, window.innerHeight, dpr);
@@ -1673,8 +1919,8 @@ if (!CAPTURE_MODE) {
 // DETERMINISTIC CAPTURE HOOK (pure function of frameIndex @ 60fps)
 // ============================================================================
 const compositeCanvas = document.createElement('canvas');
-compositeCanvas.width = 1920;
-compositeCanvas.height = 1080;
+compositeCanvas.width = CAPTURE_W;
+compositeCanvas.height = CAPTURE_H;
 const compositeCtx = compositeCanvas.getContext('2d');
 
 window.__marketWave = {
@@ -1685,8 +1931,8 @@ window.__marketWave = {
   grabPngDataUrl(frameIndex) {
     const t = frameIndex / 60;
     evaluateFrame(t, true);
-    compositeCtx.drawImage(glCanvas, 0, 0, 1920, 1080);
-    compositeCtx.drawImage(hudCanvas, 0, 0, 1920, 1080);
+    compositeCtx.drawImage(glCanvas, 0, 0, CAPTURE_W, CAPTURE_H);
+    compositeCtx.drawImage(hudCanvas, 0, 0, CAPTURE_W, CAPTURE_H);
     return compositeCanvas.toDataURL('image/png');
   },
   setPreset(idx) {

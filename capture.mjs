@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = __dirname;
-const WIDTH = 1920;
-const HEIGHT = 1080;
+const VERTICAL = process.argv.includes('--vertical');
+const WIDTH = VERTICAL ? 1080 : 1920;
+const HEIGHT = VERTICAL ? 1920 : 1080;
 const FPS = 60;
 const TOTAL_FRAMES = 900; // 15.00 seconds
 const DURATION = TOTAL_FRAMES / FPS;
@@ -353,7 +354,8 @@ async function main() {
     });
 
     const loadDone = new Promise((resolve) => cdp.on('Page.loadEventFired', resolve));
-    await cdp.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html?capture=1` });
+    const query = VERTICAL ? '?capture=1&vertical=1' : '?capture=1';
+    await cdp.send('Page.navigate', { url: `http://127.0.0.1:${port}/index.html${query}` });
     await loadDone;
     await evalJs(cdp, 'document.fonts ? document.fonts.ready : Promise.resolve()');
     await new Promise((r) => setTimeout(r, 250));
@@ -382,7 +384,7 @@ async function main() {
     }
 
     if (previewOnly) {
-      const stillsDir = path.join(PROJECT_DIR, 'stills');
+      const stillsDir = VERTICAL ? path.join(PROJECT_DIR, 'stills', 'vertical') : path.join(PROJECT_DIR, 'stills');
       fs.mkdirSync(stillsDir, { recursive: true });
       const previewFrames = [
         { f: 90, name: '01_open_lift_1.5s.png' },
@@ -395,14 +397,17 @@ async function main() {
       for (const item of previewFrames) {
         const png = await grabFramePng(cdp, item.f);
         fs.writeFileSync(path.join(stillsDir, item.name), png);
-        console.log(`Saved stills/${item.name} (${png.length} bytes)`);
+        console.log(`Saved ${path.relative(PROJECT_DIR, path.join(stillsDir, item.name))} (${png.length} bytes)`);
       }
       return;
     }
 
-    // Full deterministic 900-frame 1080p60 encode piped to ffmpeg
+    // Full deterministic 900-frame 60fps encode piped to ffmpeg
     const wavPath = path.join(PROJECT_DIR, '.tmp_market_audio.wav');
-    const mp4Path = path.join(PROJECT_DIR, 'pixel-mosaic-market-wave-1080p60.mp4');
+    const mp4Name = VERTICAL
+      ? 'pixel-mosaic-market-wave-vertical-1080x1920-60fps.mp4'
+      : 'pixel-mosaic-market-wave-1080p60.mp4';
+    const mp4Path = path.join(PROJECT_DIR, mp4Name);
     console.log('Synthesizing 15.0s subtle stereo market ambience (48 kHz)...');
     synthesizeMarketAudioWav(wavPath, DURATION);
 

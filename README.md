@@ -6,7 +6,9 @@ An original interactive Three.js isometric 3D pixel-mosaic market visualization 
 
 [![TAREN — Market Wave (15s 1080p60 preview — click for full MP4)](./preview.gif)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4)
 
-> **Full 1080p60 Video (with synthesized stereo audio):** [Download / Watch `pixel-mosaic-market-wave-1080p60.mp4` (1920×1080, 60 fps, 15.0s, 30.5 MB)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4) · [View file in repo](./pixel-mosaic-market-wave-1080p60.mp4)
+> **Full 1080p60 Videos (with synthesized stereo audio):**
+> - **Desktop (16:9):** [Download / Watch `pixel-mosaic-market-wave-1080p60.mp4` (1920×1080, 60 fps, 15.0s, 30.5 MB)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-1080p60.mp4) · [View in repo](./pixel-mosaic-market-wave-1080p60.mp4)
+> - **Mobile Vertical (9:16):** [Download / Watch `pixel-mosaic-market-wave-vertical-1080x1920-60fps.mp4` (1080×1920, 60 fps, 15.0s, 24.7 MB)](https://github.com/artem-kaseka/pixel-mosaic-market-wave/raw/main/pixel-mosaic-market-wave-vertical-1080x1920-60fps.mp4) · [View in repo](./pixel-mosaic-market-wave-vertical-1080x1920-60fps.mp4)
 
 ## Concept
 
@@ -52,6 +54,9 @@ Requires Node.js, Chrome/Chromium (with SwiftShader WebGL2 support), and `ffmpeg
 # Preview 6 key stills into stills/
 node capture.mjs --preview-stills
 
-# Render full 15.0s (900 frames) 1920x1080 60fps MP4 with subtle synthesized ambience
+# Render full 15.0s (900 frames) landscape 1920x1080 60fps MP4 with subtle synthesized ambience
 node capture.mjs
+
+# Render full 15.0s (900 frames) vertical 1080x1920 60fps mobile MP4
+node capture.mjs --vertical
 ```
